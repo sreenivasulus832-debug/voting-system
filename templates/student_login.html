@@ -1,0 +1,151 @@
+{% extends "base.html" %}
+
+{% block title %}Student Login | Secure Voting Portal{% endblock %}
+
+{% block content %}
+<div class="max-w-md mx-auto py-8 px-4">
+    <!-- Login Card -->
+    <div class="bg-white rounded-3xl p-8 sm:p-10 shadow-xl border border-slate-200/80 relative overflow-hidden">
+        
+        <!-- Top decorative banner -->
+        <div class="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-blue-600 via-indigo-600 to-brand-500"></div>
+
+        <!-- Header -->
+        <div class="text-center mb-8">
+            <div class="w-16 h-16 bg-brand-50 text-brand-600 border border-brand-100 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-sm">
+                <i class="fa-solid fa-graduation-cap text-3xl"></i>
+            </div>
+            <h1 class="text-2xl font-black text-slate-900 tracking-tight">Student Voter Login</h1>
+            <p class="text-xs text-slate-500 mt-1">Authenticate your student identity to cast your ballot.</p>
+        </div>
+
+        {% if not active_elections %}
+            <!-- No election alert -->
+            <div class="bg-amber-50 border border-amber-200 rounded-2xl p-5 text-center my-4">
+                <div class="w-10 h-10 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center mx-auto mb-2">
+                    <i class="fa-solid fa-bell-slash text-base"></i>
+                </div>
+                <h3 class="text-sm font-bold text-amber-900">Voting Closed / No Active Elections</h3>
+                <p class="text-xs text-amber-700 mt-1 leading-relaxed">
+                    There are no active elections open for voting at this time. Please check back when election administrators activate voting.
+                </p>
+                <div class="mt-4 pt-3 border-t border-amber-200 flex justify-center gap-2">
+                    <a href="{{ url_for('index') }}" class="px-3 py-1.5 bg-amber-100 hover:bg-amber-200 text-amber-800 rounded-lg text-xs font-semibold">
+                        Back to Home
+                    </a>
+                    <a href="{{ url_for('admin_login') }}" class="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-xs font-semibold">
+                        Admin Login
+                    </a>
+                </div>
+            </div>
+        {% else %}
+            <form action="{{ url_for('student_login') }}" method="POST" class="space-y-5">
+                
+                <!-- Election Selection -->
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
+                        Election in Session <span class="text-rose-500">*</span>
+                    </label>
+                    <div class="relative">
+                        <select name="election_id" required class="w-full pl-3.5 pr-10 py-3 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 text-sm font-semibold text-slate-800 bg-white shadow-sm appearance-none cursor-pointer">
+                            {% for election in active_elections %}
+                                <option value="{{ election.id }}" {% if loop.first %}selected{% endif %}>
+                                    {{ election.title }} (Active)
+                                </option>
+                            {% endfor %}
+                        </select>
+                        <span class="absolute inset-y-0 right-0 pr-3.5 flex items-center pointer-events-none text-slate-400">
+                            <i class="fa-solid fa-chevron-down text-xs"></i>
+                        </span>
+                    </div>
+                </div>
+
+                <!-- Student ID / Roll Number -->
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
+                        Student ID / Roll Number <span class="text-rose-500">*</span>
+                    </label>
+                    <div class="relative">
+                        <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                            <i class="fa-solid fa-id-badge text-base"></i>
+                        </span>
+                        <input type="text" name="student_id" required autofocus placeholder="e.g. 2026-CS-001"
+                            class="w-full pl-11 pr-4 py-3 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 text-sm text-slate-800 shadow-sm placeholder:text-slate-400 transition">
+                    </div>
+                </div>
+
+                <!-- Access PIN / Password -->
+                <div>
+                    <div class="flex items-center justify-between mb-2">
+                        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider">
+                            Access Code / PIN
+                        </label>
+                        <span class="text-[11px] text-slate-400">(Optional if unassigned)</span>
+                    </div>
+                    <div class="relative">
+                        <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                            <i class="fa-solid fa-key text-base"></i>
+                        </span>
+                        <input type="password" id="accessCodeInput" name="access_code" placeholder="Enter assigned security PIN"
+                            class="w-full pl-11 pr-11 py-3 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 text-sm text-slate-800 shadow-sm placeholder:text-slate-400 transition">
+                        <button type="button" onclick="togglePasswordVisibility()" class="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 hover:text-slate-600">
+                            <i id="toggleIcon" class="fa-regular fa-eye text-xs"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Submit Button -->
+                <button type="submit" class="w-full py-3.5 px-4 rounded-xl bg-gradient-to-r from-brand-600 to-indigo-600 hover:from-brand-700 hover:to-indigo-700 text-white font-bold text-sm shadow-md shadow-brand-500/25 transition transform active:scale-[0.99] flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-lock-open text-xs"></i> Verify Identity & Open Ballot
+                </button>
+            </form>
+        {% endif %}
+
+        <!-- Navigation Links -->
+        <div class="mt-8 pt-6 border-t border-slate-100 flex flex-col gap-3 text-center">
+            <p class="text-xs text-slate-500">
+                Not registered yet?
+                <a href="{{ url_for('student_register') }}" class="font-bold text-brand-600 hover:text-brand-700 underline underline-offset-2 ml-1">
+                    Register as Voter
+                </a>
+            </p>
+            <p class="text-[11px] text-slate-400">
+                Are you an election official?
+                <a href="{{ url_for('admin_login') }}" class="text-slate-600 hover:text-slate-900 font-semibold underline underline-offset-2">
+                    Admin Portal Login
+                </a>
+            </p>
+        </div>
+
+    </div>
+
+    <!-- Security Notice Footer -->
+    <div class="mt-6 bg-slate-100/80 rounded-2xl p-4 text-center border border-slate-200/60">
+        <div class="flex items-center justify-center gap-2 text-xs font-semibold text-slate-600">
+            <i class="fa-solid fa-shield-halved text-emerald-600"></i>
+            <span>Anonymous & Encrypted Ballots</span>
+        </div>
+        <p class="text-[11px] text-slate-500 mt-1">
+            Your vote is anonymous and decoupled from your student profile in the database.
+        </p>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function togglePasswordVisibility() {
+    const input = document.getElementById('accessCodeInput');
+    const icon = document.getElementById('toggleIcon');
+    if (input.type === 'password') {
+        input.type = 'text';
+        icon.classList.remove('fa-eye');
+        icon.classList.add('fa-eye-slash');
+    } else {
+        input.type = 'password';
+        icon.classList.remove('fa-eye-slash');
+        icon.classList.add('fa-eye');
+    }
+}
+</script>
+{% endblock %}

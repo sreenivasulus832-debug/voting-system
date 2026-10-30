@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+
+{% block title %}Student Voter Registration | Student Voting System{% endblock %}
+
+{% block content %}
+<div class="max-w-md mx-auto py-8 px-4">
+    <div class="bg-white rounded-3xl p-8 sm:p-10 shadow-xl border border-slate-200/80 relative overflow-hidden">
+        
+        <!-- Top decorative banner -->
+        <div class="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-emerald-500 via-teal-500 to-brand-500"></div>
+
+        <!-- Header -->
+        <div class="text-center mb-8">
+            <div class="w-16 h-16 bg-emerald-50 text-emerald-600 border border-emerald-100 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-sm">
+                <i class="fa-solid fa-user-plus text-2xl"></i>
+            </div>
+            <h1 class="text-2xl font-black text-slate-900 tracking-tight">Student Registration</h1>
+            <p class="text-xs text-slate-500 mt-1">Register your voter record to participate in student elections.</p>
+        </div>
+
+        <form action="{{ url_for('student_register') }}" method="POST" class="space-y-5">
+            <!-- Student ID -->
+            <div>
+                <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
+                    Student ID / Roll Number <span class="text-rose-500">*</span>
+                </label>
+                <div class="relative">
+                    <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                        <i class="fa-solid fa-id-badge text-base"></i>
+                    </span>
+                    <input type="text" name="student_id" required autofocus placeholder="e.g. 2026-CS-042"
+                        class="w-full pl-11 pr-4 py-3 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm text-slate-800 shadow-sm placeholder:text-slate-400 transition">
+                </div>
+            </div>
+
+            <!-- Full Name -->
+            <div>
+                <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
+                    Full Name <span class="text-rose-500">*</span>
+                </label>
+                <div class="relative">
+                    <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                        <i class="fa-solid fa-user text-base"></i>
+                    </span>
+                    <input type="text" name="full_name" required placeholder="Enter your full legal name"
+                        class="w-full pl-11 pr-4 py-3 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm text-slate-800 shadow-sm placeholder:text-slate-400 transition">
+                </div>
+            </div>
+
+            <!-- Access PIN (Optional) -->
+            <div>
+                <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
+                    Personal Access PIN / Code <span class="text-slate-400 font-normal">(Optional)</span>
+                </label>
+                <div class="relative">
+                    <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                        <i class="fa-solid fa-lock text-base"></i>
+                    </span>
+                    <input type="password" name="access_code" placeholder="Create a 4-digit or custom PIN"
+                        class="w-full pl-11 pr-4 py-3 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm text-slate-800 shadow-sm placeholder:text-slate-400 transition">
+                </div>
+            </div>
+
+            <!-- Submit Button -->
+            <button type="submit" class="w-full py-3.5 px-4 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-bold text-sm shadow-md shadow-emerald-500/25 transition transform active:scale-[0.99] flex items-center justify-center gap-2">
+                <i class="fa-solid fa-check text-xs"></i> Complete Registration
+            </button>
+        </form>
+
+        <div class="mt-8 pt-6 border-t border-slate-100 text-center">
+            <p class="text-xs text-slate-500">
+                Already registered?
+                <a href="{{ url_for('student_login') }}" class="font-bold text-brand-600 hover:text-brand-700 underline underline-offset-2 ml-1">
+                    Go to Student Login
+                </a>
+            </p>
+        </div>
+    </div>
+</div>
+{% endblock %}

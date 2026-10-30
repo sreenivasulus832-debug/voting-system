@@ -1,0 +1,349 @@
+{% extends "base.html" %}
+
+{% block title %}Admin Live Monitor | Student Voting System{% endblock %}
+
+{% block content %}
+<div class="space-y-8 py-4">
+    <!-- Header with Live Badge and Status Controls -->
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+        <div>
+            <div class="flex items-center gap-3">
+                <h1 class="text-2xl font-extrabold text-slate-900 tracking-tight">Live Election Monitoring</h1>
+                <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                    <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> Auto-Syncing (4s)
+                </span>
+            </div>
+            <p class="text-xs text-slate-500 mt-1">Real-time voting tally, turnout telemetry, and audit trail.</p>
+        </div>
+
+        <!-- Controls: Election Selection & CSV Export -->
+        <div class="flex flex-wrap items-center gap-3">
+            {% if elections %}
+                <form method="GET" action="{{ url_for('admin_dashboard') }}" class="flex items-center gap-2">
+                    <label class="text-xs font-semibold text-slate-600">Election:</label>
+                    <select name="election_id" onchange="this.form.submit()" class="text-xs font-medium px-3 py-2 rounded-xl border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-brand-500">
+                        {% for el in elections %}
+                            <option value="{{ el.id }}" {% if current_election and current_election.id == el.id %}selected{% endif %}>
+                                {{ el.title }} ({{ el.status|capitalize }})
+                            </option>
+                        {% endfor %}
+                    </select>
+                </form>
+
+                {% if current_election %}
+                    <!-- Status toggler -->
+                    <form method="POST" action="{{ url_for('toggle_election_status', election_id=current_election.id) }}" class="inline">
+                        {% if current_election.status == 'active' %}
+                            <input type="hidden" name="status" value="paused">
+                            <button type="submit" class="px-3 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-xs font-medium flex items-center gap-1.5 shadow-sm transition">
+                                <i class="fa-solid fa-pause"></i> Pause Voting
+                            </button>
+                        {% elif current_election.status == 'paused' %}
+                            <input type="hidden" name="status" value="active">
+                            <button type="submit" class="px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-medium flex items-center gap-1.5 shadow-sm transition">
+                                <i class="fa-solid fa-play"></i> Resume Voting
+                            </button>
+                        {% else %}
+                            <input type="hidden" name="status" value="active">
+                            <button type="submit" class="px-3 py-2 bg-brand-600 hover:bg-brand-700 text-white rounded-xl text-xs font-medium flex items-center gap-1.5 shadow-sm transition">
+                                <i class="fa-solid fa-rocket"></i> Activate Election
+                            </button>
+                        {% endif %}
+                    </form>
+
+                    <a href="{{ url_for('export_results', election_id=current_election.id) }}" class="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-medium flex items-center gap-1.5 border border-slate-200 transition">
+                        <i class="fa-solid fa-file-csv text-emerald-600"></i> Export CSV
+                    </a>
+                {% endif %}
+            {% else %}
+                <a href="{{ url_for('admin_elections') }}" class="px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white rounded-xl text-xs font-semibold flex items-center gap-2 shadow-sm">
+                    <i class="fa-solid fa-plus"></i> Create First Election
+                </a>
+            {% endif %}
+            <button onclick="fetchLatestStats()" class="p-2 text-slate-500 hover:text-slate-800 bg-slate-100 rounded-xl hover:bg-slate-200 transition text-xs" title="Refresh Now">
+                <i class="fa-solid fa-arrows-rotate"></i>
+            </button>
+        </div>
+    </div>
+
+    {% if not elections %}
+        <!-- Empty state -->
+        <div class="bg-white rounded-2xl p-12 text-center border border-slate-200 shadow-sm max-w-2xl mx-auto">
+            <div class="w-16 h-16 bg-slate-100 text-slate-400 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                <i class="fa-solid fa-box-archive text-3xl"></i>
+            </div>
+            <h2 class="text-xl font-bold text-slate-800">No Elections Configured Yet</h2>
+            <p class="text-xs text-slate-500 mt-2 max-w-md mx-auto">
+                The database contains no pre-built election or student records. You have complete control to set up custom elections, positions, candidates, and voter rolls.
+            </p>
+            <div class="mt-6 flex justify-center gap-3">
+                <a href="{{ url_for('admin_elections') }}" class="px-5 py-2.5 bg-brand-600 hover:bg-brand-700 text-white text-xs font-semibold rounded-xl shadow-md shadow-brand-500/20">
+                    <i class="fa-solid fa-plus mr-1"></i> Configure New Election
+                </a>
+                <a href="{{ url_for('admin_students') }}" class="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-xl border border-slate-300">
+                    <i class="fa-solid fa-user-plus mr-1"></i> Add Students
+                </a>
+            </div>
+        </div>
+    {% else %}
+
+        <!-- Metric Stat Cards -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+            <!-- Total Registered Voters -->
+            <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-4">
+                <div class="w-12 h-12 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center text-xl font-bold">
+                    <i class="fa-solid fa-users"></i>
+                </div>
+                <div>
+                    <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Registered Students</span>
+                    <h3 id="statTotalStudents" class="text-2xl font-black text-slate-800">{{ stats.total_students }}</h3>
+                </div>
+            </div>
+
+            <!-- Total Ballots Cast -->
+            <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-4">
+                <div class="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-xl font-bold">
+                    <i class="fa-solid fa-check-to-slot"></i>
+                </div>
+                <div>
+                    <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Total Ballots Cast</span>
+                    <h3 id="statTotalVoted" class="text-2xl font-black text-slate-800">{{ stats.total_voted }}</h3>
+                </div>
+            </div>
+
+            <!-- Voter Turnout -->
+            <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-4">
+                <div class="w-12 h-12 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center text-xl font-bold">
+                    <i class="fa-solid fa-chart-pie"></i>
+                </div>
+                <div>
+                    <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Voter Turnout</span>
+                    <h3 id="statTurnout" class="text-2xl font-black text-slate-800">{{ stats.turnout_percent }}%</h3>
+                </div>
+            </div>
+
+            <!-- Election Status -->
+            <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-4">
+                <div class="w-12 h-12 rounded-xl 
+                    {% if current_election.status == 'active' %} bg-emerald-50 text-emerald-600
+                    {% elif current_election.status == 'paused' %} bg-amber-50 text-amber-600
+                    {% else %} bg-slate-100 text-slate-600 {% endif %} flex items-center justify-center text-xl font-bold">
+                    <i class="fa-solid fa-circle-dot"></i>
+                </div>
+                <div>
+                    <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Election State</span>
+                    <h3 class="text-xl font-bold 
+                        {% if current_election.status == 'active' %} text-emerald-600
+                        {% elif current_election.status == 'paused' %} text-amber-600
+                        {% else %} text-slate-700 {% endif %} uppercase">
+                        {{ current_election.status }}
+                    </h3>
+                </div>
+            </div>
+        </div>
+
+        <!-- Position Results & Visual Real-time Tally -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+            
+            <!-- Live Tally Per Position -->
+            <div class="lg:col-span-8 space-y-6">
+                <div class="flex items-center justify-between">
+                    <h2 class="text-lg font-bold text-slate-900 flex items-center gap-2">
+                        <i class="fa-solid fa-square-poll-vertical text-brand-600"></i> Candidate Vote Breakdown
+                    </h2>
+                    <span class="text-xs text-slate-400" id="lastUpdated">Updated just now</span>
+                </div>
+
+                <div id="positionTallyContainer" class="space-y-6">
+                    {% for pos in election_results %}
+                        <div class="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm">
+                            <div class="flex items-center justify-between border-b border-slate-100 pb-3 mb-4">
+                                <div>
+                                    <h3 class="text-base font-bold text-slate-800">{{ pos.title }}</h3>
+                                    <span class="text-xs text-slate-400">Total votes for this position: {{ pos.total_position_votes }}</span>
+                                </div>
+                                <span class="text-xs bg-slate-100 text-slate-600 font-mono px-2 py-1 rounded">
+                                    {{ pos.candidates|length }} Candidates
+                                </span>
+                            </div>
+
+                            <div class="space-y-4">
+                                {% for cand in pos.candidates %}
+                                    <div>
+                                        <div class="flex items-center justify-between text-xs mb-1.5">
+                                            <div class="flex items-center gap-2">
+                                                <span class="font-bold text-slate-800">{{ cand.name }}</span>
+                                                {% if cand.votes > 0 and cand.votes == pos.max_votes %}
+                                                    <span class="bg-amber-100 text-amber-800 text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
+                                                        <i class="fa-solid fa-crown text-[9px]"></i> Leading
+                                                    </span>
+                                                {% endif %}
+                                            </div>
+                                            <div class="font-mono text-slate-600">
+                                                <span class="font-bold text-slate-900">{{ cand.votes }}</span> votes 
+                                                <span class="text-slate-400">({{ cand.percentage }}%)</span>
+                                            </div>
+                                        </div>
+                                        <!-- Progress Bar -->
+                                        <div class="w-full bg-slate-100 rounded-full h-3.5 overflow-hidden">
+                                            <div class="bg-gradient-to-r from-brand-500 to-indigo-600 h-3.5 rounded-full transition-all duration-700 ease-out"
+                                                style="width: {{ cand.percentage }}%;"></div>
+                                        </div>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    {% else %}
+                        <div class="bg-white rounded-2xl p-8 text-center border border-slate-200 text-slate-400 text-xs">
+                            No positions or candidates added to this election yet.
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Live Audit Logs & Quick Stats -->
+            <div class="lg:col-span-4 space-y-6">
+                <!-- Activity & Audit Log -->
+                <div class="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm">
+                    <div class="flex items-center justify-between border-b border-slate-100 pb-3 mb-4">
+                        <h3 class="text-sm font-bold text-slate-900 uppercase tracking-wider flex items-center gap-2">
+                            <i class="fa-solid fa-clock-rotate-left text-slate-500"></i> Live Activity Feed
+                        </h3>
+                        <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                    </div>
+
+                    <div id="auditLogList" class="space-y-3 max-h-[460px] overflow-y-auto pr-1 text-xs">
+                        {% for log in audit_logs %}
+                            <div class="p-3 rounded-xl bg-slate-50 border border-slate-200/60 flex flex-col gap-1">
+                                <div class="flex items-center justify-between">
+                                    <span class="font-bold text-slate-700 font-mono text-[11px]">{{ log.action }}</span>
+                                    <span class="text-[10px] text-slate-400">{{ log.created_at }}</span>
+                                </div>
+                                <p class="text-slate-600 leading-snug">{{ log.details }}</p>
+                            </div>
+                        {% else %}
+                            <p class="text-slate-400 italic text-center py-4">No activity logged yet.</p>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <!-- Database Info Card -->
+                <div class="bg-slate-900 text-white rounded-2xl p-5 shadow-sm">
+                    <h4 class="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-2 mb-2">
+                        <i class="fa-solid fa-database text-brand-400"></i> Persistent SQLite Storage
+                    </h4>
+                    <p class="text-xs text-slate-300 leading-relaxed">
+                        Database Engine: <strong>SQLite3</strong> (<code>voting.db</code>).
+                        Ballot secrecy enforced via unlinked voter hashes.
+                    </p>
+                </div>
+            </div>
+
+        </div>
+
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Auto-refresh stats every 4 seconds for live monitoring
+const currentElectionId = "{{ current_election.id if current_election else '' }}";
+
+function fetchLatestStats() {
+    if (!currentElectionId) return;
+
+    fetch(`/api/admin/stats/${currentElectionId}`)
+        .then(res => res.json())
+        .then(data => {
+            if (data.status === 'ok') {
+                // Update stats
+                document.getElementById('statTotalStudents').innerText = data.stats.total_students;
+                document.getElementById('statTotalVoted').innerText = data.stats.total_voted;
+                document.getElementById('statTurnout').innerText = `${data.stats.turnout_percent}%`;
+                document.getElementById('lastUpdated').innerText = `Updated at ${new Date().toLocaleTimeString()}`;
+
+                // Re-render position tallies
+                renderTallies(data.positions);
+
+                // Update audit feed
+                renderAuditLogs(data.logs);
+            }
+        })
+        .catch(err => console.error("Poll error:", err));
+}
+
+function renderTallies(positions) {
+    const container = document.getElementById('positionTallyContainer');
+    if (!positions || positions.length === 0) return;
+
+    let html = '';
+    positions.forEach(pos => {
+        let candidatesHtml = '';
+        pos.candidates.forEach(cand => {
+            const isLeading = cand.votes > 0 && cand.votes === pos.max_votes;
+            candidatesHtml += `
+                <div>
+                    <div class="flex items-center justify-between text-xs mb-1.5">
+                        <div class="flex items-center gap-2">
+                            <span class="font-bold text-slate-800">${cand.name}</span>
+                            ${isLeading ? '<span class="bg-amber-100 text-amber-800 text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1"><i class="fa-solid fa-crown text-[9px]"></i> Leading</span>' : ''}
+                        </div>
+                        <div class="font-mono text-slate-600">
+                            <span class="font-bold text-slate-900">${cand.votes}</span> votes 
+                            <span class="text-slate-400">(${cand.percentage}%)</span>
+                        </div>
+                    </div>
+                    <div class="w-full bg-slate-100 rounded-full h-3.5 overflow-hidden">
+                        <div class="bg-gradient-to-r from-brand-500 to-indigo-600 h-3.5 rounded-full transition-all duration-700 ease-out"
+                            style="width: ${cand.percentage}%;"></div>
+                    </div>
+                </div>
+            `;
+        });
+
+        html += `
+            <div class="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm">
+                <div class="flex items-center justify-between border-b border-slate-100 pb-3 mb-4">
+                    <div>
+                        <h3 class="text-base font-bold text-slate-800">${pos.title}</h3>
+                        <span class="text-xs text-slate-400">Total votes for this position: ${pos.total_position_votes}</span>
+                    </div>
+                    <span class="text-xs bg-slate-100 text-slate-600 font-mono px-2 py-1 rounded">
+                        ${pos.candidates.length} Candidates
+                    </span>
+                </div>
+                <div class="space-y-4">
+                    ${candidatesHtml}
+                </div>
+            </div>
+        `;
+    });
+
+    container.innerHTML = html;
+}
+
+function renderAuditLogs(logs) {
+    const list = document.getElementById('auditLogList');
+    if (!logs || logs.length === 0) return;
+
+    let html = '';
+    logs.forEach(log => {
+        html += `
+            <div class="p-3 rounded-xl bg-slate-50 border border-slate-200/60 flex flex-col gap-1">
+                <div class="flex items-center justify-between">
+                    <span class="font-bold text-slate-700 font-mono text-[11px]">${log.action}</span>
+                    <span class="text-[10px] text-slate-400">${log.created_at}</span>
+                </div>
+                <p class="text-slate-600 leading-snug">${log.details}</p>
+            </div>
+        `;
+    });
+    list.innerHTML = html;
+}
+
+if (currentElectionId) {
+    setInterval(fetchLatestStats, 4000);
+}
+</script>
+{% endblock %}

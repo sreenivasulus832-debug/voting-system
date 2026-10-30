@@ -1,0 +1,146 @@
+{% extends "base.html" %}
+
+{% block title %}Voter Portal | Student Voting System{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto py-8">
+    <!-- Header -->
+    <div class="text-center mb-10">
+        <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-brand-50 text-brand-700 border border-brand-200 mb-3">
+            <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> Official Voting Gateway
+        </span>
+        <h1 class="text-4xl font-extrabold text-slate-900 tracking-tight sm:text-5xl">Student Voting System</h1>
+        <p class="mt-3 text-lg text-slate-600 max-w-2xl mx-auto">
+            Cast your vote securely and anonymously. All ballots are encrypted and auditable in real-time.
+        </p>
+    </div>
+
+    <!-- Active Elections / Voter Entry Area -->
+    <div class="grid grid-cols-1 md:grid-cols-12 gap-8 items-start">
+        
+        <!-- Voter Authentication Box -->
+        <div class="md:col-span-7 bg-white p-6 sm:p-8 rounded-2xl shadow-sm border border-slate-200">
+            <div class="flex items-center justify-between border-b border-slate-100 pb-4 mb-6">
+                <div>
+                    <h2 class="text-xl font-bold text-slate-900">Student Ballot Access</h2>
+                    <p class="text-xs text-slate-500">Enter your credentials to cast your vote</p>
+                </div>
+                <div class="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center text-slate-700">
+                    <i class="fa-solid fa-id-card text-lg"></i>
+                </div>
+            </div>
+
+            {% if not active_elections %}
+                <div class="bg-amber-50 border border-amber-200 rounded-xl p-5 text-center my-4">
+                    <div class="w-12 h-12 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center mx-auto mb-3">
+                        <i class="fa-solid fa-calendar-xmark text-xl"></i>
+                    </div>
+                    <h3 class="text-base font-semibold text-amber-900">No Active Elections Currently</h3>
+                    <p class="text-xs text-amber-700 mt-1 max-w-sm mx-auto">
+                        There are no ongoing elections at this moment. The election administrator will activate elections when voting opens.
+                    </p>
+                    <a href="{{ url_for('admin_login') }}" class="inline-flex items-center gap-2 mt-4 px-4 py-2 bg-slate-900 text-white rounded-lg text-xs font-medium hover:bg-slate-800 transition">
+                        <i class="fa-solid fa-shield-halved"></i> Go to Admin Dashboard to Create Election
+                    </a>
+                </div>
+            {% else %}
+                <form action="{{ url_for('voter_login') }}" method="POST" class="space-y-5">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
+                            Select Active Election
+                        </label>
+                        <select name="election_id" required class="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 text-slate-800 bg-white font-medium">
+                            {% for election in active_elections %}
+                                <option value="{{ election.id }}">{{ election.title }} (Active)</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
+                            Student ID / Roll Number <span class="text-rose-500">*</span>
+                        </label>
+                        <div class="relative">
+                            <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                                <i class="fa-solid fa-graduation-cap"></i>
+                            </span>
+                            <input type="text" name="student_id" required placeholder="e.g. STU2026001"
+                                class="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 text-slate-800">
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
+                            Access Code / PIN <span class="text-slate-400 font-normal">(Optional if unassigned)</span>
+                        </label>
+                        <div class="relative">
+                            <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                                <i class="fa-solid fa-key"></i>
+                            </span>
+                            <input type="password" name="access_code" placeholder="Enter PIN if provided by Admin"
+                                class="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 text-slate-800">
+                        </div>
+                    </div>
+
+                    <button type="submit" class="w-full py-3 px-4 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-semibold shadow-md shadow-brand-500/20 transition flex items-center justify-center gap-2 text-sm">
+                        <i class="fa-solid fa-arrow-right-to-bracket"></i> Verify & Proceed to Vote
+                    </button>
+                </form>
+            {% endif %}
+
+            <!-- Quick Links -->
+            <div class="mt-8 pt-6 border-t border-slate-100 flex items-center justify-between text-xs">
+                <a href="{{ url_for('student_login') }}" class="font-bold text-brand-600 hover:text-brand-700 flex items-center gap-1.5">
+                    <i class="fa-solid fa-arrow-up-right-from-square"></i> Dedicated Student Login Page
+                </a>
+                <a href="{{ url_for('student_register') }}" class="font-semibold text-slate-600 hover:text-slate-900 flex items-center gap-1">
+                    <i class="fa-solid fa-user-plus text-emerald-500"></i> New Registration
+                </a>
+            </div>
+        </div>
+
+        <!-- System Information & Features Sidebar -->
+        <div class="md:col-span-5 space-y-6">
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                <h3 class="text-sm font-bold text-slate-900 uppercase tracking-wider mb-4 flex items-center gap-2">
+                    <i class="fa-solid fa-shield-halved text-brand-600"></i> Voting Integrity & Rules
+                </h3>
+                <ul class="space-y-3 text-xs text-slate-600">
+                    <li class="flex items-start gap-2.5">
+                        <i class="fa-solid fa-lock text-emerald-500 mt-0.5"></i>
+                        <span><strong>Secret Ballot:</strong> Your vote selection is separated from your identity in the database to guarantee total anonymity.</span>
+                    </li>
+                    <li class="flex items-start gap-2.5">
+                        <i class="fa-solid fa-fingerprint text-brand-500 mt-0.5"></i>
+                        <span><strong>One Student, One Vote:</strong> Once submitted, the system records participation so no duplicate ballots can be filed.</span>
+                    </li>
+                    <li class="flex items-start gap-2.5">
+                        <i class="fa-solid fa-receipt text-indigo-500 mt-0.5"></i>
+                        <span><strong>Cryptographic Receipt:</strong> You will receive a unique verification hash upon voting as audit proof.</span>
+                    </li>
+                    <li class="flex items-start gap-2.5">
+                        <i class="fa-solid fa-desktop text-purple-500 mt-0.5"></i>
+                        <span><strong>Live Admin Monitoring:</strong> Election officials monitor voter turnout and election health in real time.</span>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- Admin Shortcut Card -->
+            <div class="bg-gradient-to-br from-slate-900 to-slate-800 p-6 rounded-2xl text-white shadow-md">
+                <div class="flex items-center justify-between mb-3">
+                    <span class="text-xs uppercase font-bold tracking-widest text-slate-400">Admin Section</span>
+                    <i class="fa-solid fa-chart-pie text-brand-400 text-xl"></i>
+                </div>
+                <h4 class="text-lg font-bold">Election Administration</h4>
+                <p class="text-xs text-slate-300 mt-1 mb-4">
+                    Set up elections, configure positions and candidates, monitor live votes, and view real-time tally analytics.
+                </p>
+                <a href="{{ url_for('admin_login') }}" class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-brand-600 hover:bg-brand-500 text-white text-xs font-semibold transition">
+                    Access Admin Portal <i class="fa-solid fa-arrow-right"></i>
+                </a>
+            </div>
+        </div>
+
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,266 @@
+{% extends "base.html" %}
+
+{% block title %}Manage Elections & Candidates | Admin Portal{% endblock %}
+
+{% block content %}
+<div class="space-y-8 py-4">
+    <!-- Header -->
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+        <div>
+            <h1 class="text-2xl font-extrabold text-slate-900 tracking-tight">Elections & Candidate Manager</h1>
+            <p class="text-xs text-slate-500 mt-1">Configure your election title, positions/posts, and candidates from scratch.</p>
+        </div>
+        <button onclick="document.getElementById('createElectionModal').classList.remove('hidden')" class="px-4 py-2.5 bg-brand-600 hover:bg-brand-700 text-white rounded-xl text-xs font-semibold flex items-center gap-2 shadow-sm transition">
+            <i class="fa-solid fa-plus"></i> Create New Election
+        </button>
+    </div>
+
+    <!-- Elections List -->
+    {% if not elections %}
+        <div class="bg-white rounded-2xl p-10 text-center border border-slate-200 shadow-sm">
+            <div class="w-16 h-16 bg-slate-100 text-slate-400 rounded-2xl flex items-center justify-center mx-auto mb-3">
+                <i class="fa-solid fa-clipboard-list text-2xl"></i>
+            </div>
+            <h3 class="text-base font-bold text-slate-800">No Elections Created</h3>
+            <p class="text-xs text-slate-500 mt-1 max-w-sm mx-auto">Create an election to begin adding positions (e.g. President, Secretary, Representative) and candidate contenders.</p>
+            <button onclick="document.getElementById('createElectionModal').classList.remove('hidden')" class="mt-4 px-4 py-2 bg-brand-600 text-white rounded-xl text-xs font-semibold">
+                + Create Election Now
+            </button>
+        </div>
+    {% else %}
+        <div class="space-y-8">
+            {% for el in elections %}
+                <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                    <!-- Election Top Bar -->
+                    <div class="p-6 bg-slate-50/60 border-b border-slate-200 flex flex-col md:flex-row justify-between md:items-center gap-4">
+                        <div>
+                            <div class="flex items-center gap-3">
+                                <h2 class="text-xl font-bold text-slate-900">{{ el.title }}</h2>
+                                <span class="px-2.5 py-0.5 rounded-full text-[11px] font-bold uppercase
+                                    {% if el.status == 'active' %} bg-emerald-100 text-emerald-800
+                                    {% elif el.status == 'paused' %} bg-amber-100 text-amber-800
+                                    {% else %} bg-slate-200 text-slate-700 {% endif %}">
+                                    {{ el.status }}
+                                </span>
+                            </div>
+                            {% if el.description %}
+                                <p class="text-xs text-slate-600 mt-1">{{ el.description }}</p>
+                            {% endif %}
+                            <span class="text-[11px] text-slate-400 mt-1 block">Created on: {{ el.created_at }}</span>
+                        </div>
+
+                        <!-- Actions for Election -->
+                        <div class="flex flex-wrap items-center gap-2">
+                            <button onclick="openAddPositionModal('{{ el.id }}', '{{ el.title }}')" class="px-3 py-1.5 bg-brand-50 hover:bg-brand-100 text-brand-700 border border-brand-200 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition">
+                                <i class="fa-solid fa-plus text-xs"></i> Add Position
+                            </button>
+
+                            <form method="POST" action="{{ url_for('toggle_election_status', election_id=el.id) }}" class="inline">
+                                {% if el.status != 'active' %}
+                                    <input type="hidden" name="status" value="active">
+                                    <button type="submit" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold transition">
+                                        Activate
+                                    </button>
+                                {% else %}
+                                    <input type="hidden" name="status" value="closed">
+                                    <button type="submit" class="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-xs font-semibold transition">
+                                        Close
+                                    </button>
+                                {% endif %}
+                            </form>
+
+                            <form method="POST" action="{{ url_for('delete_election', election_id=el.id) }}" onsubmit="return confirm('Are you sure you want to delete this election? All associated positions, candidates, and votes will be permanently deleted.');" class="inline">
+                                <button type="submit" class="p-2 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded-lg text-xs transition" title="Delete Election">
+                                    <i class="fa-solid fa-trash"></i>
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+
+                    <!-- Positions and Candidates under this Election -->
+                    <div class="p-6 space-y-6">
+                        {% if el.positions %}
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                {% for pos in el.positions %}
+                                    <div class="bg-slate-50/80 rounded-xl p-5 border border-slate-200 flex flex-col justify-between">
+                                        <div>
+                                            <div class="flex items-center justify-between border-b border-slate-200 pb-2 mb-3">
+                                                <div>
+                                                    <h3 class="text-sm font-bold text-slate-800">{{ pos.title }}</h3>
+                                                    {% if pos.description %}
+                                                        <p class="text-[11px] text-slate-500">{{ pos.description }}</p>
+                                                    {% endif %}
+                                                </div>
+                                                <div class="flex items-center gap-1">
+                                                    <button onclick="openAddCandidateModal('{{ pos.id }}', '{{ pos.title }}')" class="text-xs text-brand-600 hover:text-brand-800 font-semibold p-1" title="Add Candidate to this position">
+                                                        <i class="fa-solid fa-user-plus"></i>
+                                                    </button>
+                                                    <form method="POST" action="{{ url_for('delete_position', position_id=pos.id) }}" onsubmit="return confirm('Delete this position and all its candidates?');" class="inline">
+                                                        <button type="submit" class="text-xs text-rose-400 hover:text-rose-600 p-1" title="Delete position">
+                                                            <i class="fa-solid fa-trash"></i>
+                                                        </button>
+                                                    </form>
+                                                </div>
+                                            </div>
+
+                                            <!-- Candidate List in this position -->
+                                            {% if pos.candidates %}
+                                                <div class="space-y-2">
+                                                    {% for cand in pos.candidates %}
+                                                        <div class="bg-white p-3 rounded-lg border border-slate-200 flex items-center justify-between">
+                                                            <div class="flex items-center gap-3">
+                                                                <div class="w-8 h-8 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center font-bold text-xs">
+                                                                    {{ cand.name[:2]|upper }}
+                                                                </div>
+                                                                <div>
+                                                                    <h4 class="text-xs font-bold text-slate-800">{{ cand.name }}</h4>
+                                                                    {% if cand.manifesto %}
+                                                                        <p class="text-[11px] text-slate-500 italic truncate max-w-xs">"{{ cand.manifesto }}"</p>
+                                                                    {% endif %}
+                                                                </div>
+                                                            </div>
+                                                            <form method="POST" action="{{ url_for('delete_candidate', candidate_id=cand.id) }}" onsubmit="return confirm('Remove candidate?');">
+                                                                <button type="submit" class="text-slate-400 hover:text-rose-600 text-xs p-1">
+                                                                    <i class="fa-solid fa-xmark"></i>
+                                                                </button>
+                                                            </form>
+                                                        </div>
+                                                    {% endfor %}
+                                                </div>
+                                            {% else %}
+                                                <p class="text-xs text-slate-400 italic py-2">No candidates yet. Click the + icon above to add candidates.</p>
+                                            {% endif %}
+                                        </div>
+
+                                        <button onclick="openAddCandidateModal('{{ pos.id }}', '{{ pos.title }}')" class="mt-4 w-full py-1.5 border border-dashed border-slate-300 text-slate-600 hover:border-brand-500 hover:text-brand-600 rounded-lg text-xs font-medium transition flex items-center justify-center gap-1.5">
+                                            <i class="fa-solid fa-plus text-[10px]"></i> Add Candidate
+                                        </button>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        {% else %}
+                            <div class="text-center py-6 text-slate-400 text-xs italic">
+                                No positions defined for this election yet. Click "Add Position" above to add positions (e.g. President, Secretary).
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+</div>
+
+<!-- Modal: Create Election -->
+<div id="createElectionModal" class="hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200">
+        <div class="flex items-center justify-between border-b border-slate-100 pb-3 mb-4">
+            <h3 class="text-base font-bold text-slate-900">Create New Election</h3>
+            <button onclick="document.getElementById('createElectionModal').classList.add('hidden')" class="text-slate-400 hover:text-slate-600">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+        <form action="{{ url_for('create_election') }}" method="POST" class="space-y-4">
+            <div>
+                <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Election Title <span class="text-rose-500">*</span></label>
+                <input type="text" name="title" required placeholder="e.g. Student Council General Elections" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs focus:ring-2 focus:ring-brand-500 focus:outline-none">
+            </div>
+            <div>
+                <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Description / Guidelines</label>
+                <textarea name="description" rows="3" placeholder="Enter instructions or guidelines for student voters..." class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs focus:ring-2 focus:ring-brand-500 focus:outline-none"></textarea>
+            </div>
+            <div>
+                <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Initial Status</label>
+                <select name="status" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs bg-white focus:outline-none focus:ring-2 focus:ring-brand-500">
+                    <option value="draft">Draft (Hidden from students)</option>
+                    <option value="active" selected>Active (Open for student voting)</option>
+                    <option value="paused">Paused</option>
+                </select>
+            </div>
+            <div class="flex justify-end gap-2 pt-2">
+                <button type="button" onclick="document.getElementById('createElectionModal').classList.add('hidden')" class="px-4 py-2 border rounded-xl text-xs font-semibold text-slate-600">Cancel</button>
+                <button type="submit" class="px-4 py-2 bg-brand-600 text-white rounded-xl text-xs font-semibold hover:bg-brand-700">Save Election</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Modal: Add Position -->
+<div id="addPositionModal" class="hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200">
+        <div class="flex items-center justify-between border-b border-slate-100 pb-3 mb-4">
+            <div>
+                <h3 class="text-base font-bold text-slate-900">Add Position</h3>
+                <p id="posModalElectionTitle" class="text-xs text-brand-600 font-medium"></p>
+            </div>
+            <button onclick="document.getElementById('addPositionModal').classList.add('hidden')" class="text-slate-400 hover:text-slate-600">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+        <form action="{{ url_for('add_position') }}" method="POST" class="space-y-4">
+            <input type="hidden" id="posElectionIdInput" name="election_id">
+            <div>
+                <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Position / Office Title <span class="text-rose-500">*</span></label>
+                <input type="text" name="title" required placeholder="e.g. Student President or Cultural Head" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs focus:ring-2 focus:ring-brand-500 focus:outline-none">
+            </div>
+            <div>
+                <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Description</label>
+                <input type="text" name="description" placeholder="Brief role description" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs focus:ring-2 focus:ring-brand-500 focus:outline-none">
+            </div>
+            <div class="flex justify-end gap-2 pt-2">
+                <button type="button" onclick="document.getElementById('addPositionModal').classList.add('hidden')" class="px-4 py-2 border rounded-xl text-xs font-semibold text-slate-600">Cancel</button>
+                <button type="submit" class="px-4 py-2 bg-brand-600 text-white rounded-xl text-xs font-semibold hover:bg-brand-700">Add Position</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Modal: Add Candidate -->
+<div id="addCandidateModal" class="hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200">
+        <div class="flex items-center justify-between border-b border-slate-100 pb-3 mb-4">
+            <div>
+                <h3 class="text-base font-bold text-slate-900">Add Candidate</h3>
+                <p id="candModalPositionTitle" class="text-xs text-brand-600 font-medium"></p>
+            </div>
+            <button onclick="document.getElementById('addCandidateModal').classList.add('hidden')" class="text-slate-400 hover:text-slate-600">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+        <form action="{{ url_for('add_candidate') }}" method="POST" class="space-y-4">
+            <input type="hidden" id="candPositionIdInput" name="position_id">
+            <div>
+                <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Candidate Full Name <span class="text-rose-500">*</span></label>
+                <input type="text" name="name" required placeholder="Enter student candidate name" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs focus:ring-2 focus:ring-brand-500 focus:outline-none">
+            </div>
+            <div>
+                <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Manifesto / Statement</label>
+                <textarea name="manifesto" rows="2" placeholder="Brief campaign slogan or goal statement..." class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs focus:ring-2 focus:ring-brand-500 focus:outline-none"></textarea>
+            </div>
+            <div>
+                <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Photo URL (Optional)</label>
+                <input type="url" name="photo_url" placeholder="https://..." class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs focus:ring-2 focus:ring-brand-500 focus:outline-none">
+            </div>
+            <div class="flex justify-end gap-2 pt-2">
+                <button type="button" onclick="document.getElementById('addCandidateModal').classList.add('hidden')" class="px-4 py-2 border rounded-xl text-xs font-semibold text-slate-600">Cancel</button>
+                <button type="submit" class="px-4 py-2 bg-brand-600 text-white rounded-xl text-xs font-semibold hover:bg-brand-700">Add Candidate</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function openAddPositionModal(electionId, electionTitle) {
+    document.getElementById('posElectionIdInput').value = electionId;
+    document.getElementById('posModalElectionTitle').innerText = `Election: ${electionTitle}`;
+    document.getElementById('addPositionModal').classList.remove('hidden');
+}
+
+function openAddCandidateModal(positionId, positionTitle) {
+    document.getElementById('candPositionIdInput').value = positionId;
+    document.getElementById('candModalPositionTitle').innerText = `For Position: ${positionTitle}`;
+    document.getElementById('addCandidateModal').classList.remove('hidden');
+}
+</script>
+{% endblock %}
