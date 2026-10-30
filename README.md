@@ -1,5 +1,7 @@
 # Student Electronic Voting System
 
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/sreenivasulus832-debug/voting-system)
+
 A secure, modern, full-stack student voting web application with zero hardcoded election names or voter data, featuring an administrative real-time voting monitor and persistent SQLite database storage.
 
 ---
